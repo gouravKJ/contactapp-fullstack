@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Profile</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .container {
+      background: #fff;
+      padding: 25px 30px;
+      border-radius: 8px;
+      max-width: 900px;
+      width: 100%;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+    }
+
+    .profile, .contacts {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #444;
+      margin-bottom: 15px;
+    }
+
+    #userInfo {
+      font-weight: 600;
+      font-size: 1.1rem;
+      margin-bottom: 25px;
+      color: #555;
+    }
+
+    input {
+      padding: 12px 15px;
+      margin-bottom: 15px;
+      border: 1.2px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.25s ease;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    input:focus {
+      outline: none;
+      border-color: #4a90e2;
+      box-shadow: 0 0 5px rgba(74,144,226,0.4);
+    }
+
+    button {
+      padding: 14px;
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: auto;
+    }
+    button:hover, button:focus {
+      background-color: #357abd;
+      outline: none;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
+      max-height: 450px;
+      overflow-y: auto;
+    }
+
+    ul li {
+      padding: 10px 15px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: #333;
+    }
+    ul li:last-child {
+      border-bottom: none;
+    }
+
+    ul li button {
+      background-color: #e74c3c;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    ul li button:hover, ul li button:focus {
+      background-color: #c0392b;
+      outline: none;
+    }
+
+    .logout-btn {
+      background-color: #777;
+      margin-top: 20px;
+      width: 100%;
+    }
+    .logout-btn:hover {
+      background-color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="profile">
+      <h2>User Dashboard</h2>
+      <div id="userInfo">Loading user info...</div>
+
+      <input id="name" placeholder="Name" type="text" />
+      <input id="phone" placeholder="Phone" type="text" />
+      <input id="email" placeholder="Email" type="email" />
+      <button onclick="addContact()">Add Contact</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="contacts">
+      <h2>Your Contacts</h2>
+      <ul id="contactsList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const token = new URLSearchParams(location.search).get("token");
+
+    async function loadProfile() {
+      const res = await fetch("/profile", {
+        headers: { Authorization: token }
+      });
+      const data = await res.json();
+      if(data.username){
+        document.getElementById("userInfo").innerText = `Welcome, ${data.username} (${data.email})`;
+      } else {
+        alert("Session expired or invalid token.");
+        logout();
+      }
+    }
+
+    async function loadContacts() {
+      const res = await fetch("/contacts", {
+        headers: { Authorization: token }
+      });
+      const contacts = await res.json();
+      const list = document.getElementById("contactsList");
+      list.innerHTML = "";
+      contacts.forEach(c => {
+        const li = document.createElement("li");
+        li.textContent = `${c.name} - ${c.phone} - ${c.email}`;
+        li.innerHTML += ` <button onclick="deleteContact('${c._id}')">Delete</button>`;
+        list.appendChild(li);
+      });
+    }
+
+    async function addContact() {
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const email = document.getElementById("email").value.trim();
+
+      if (!name || !phone || !email) {
+        alert("Please fill in all fields");
+        return;
+      }
+
+      await fetch("/contacts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token
+        },
+        body: JSON.stringify({ name, phone, email })
+      });
+
+      document.getElementById("name").value = "";
+      document.getElementById("phone").value = "";
+      document.getElementById("email").value = "";
+
+      loadContacts();
+    }
+
+    async function deleteContact(id) {
+      await fetch(`/contacts/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: token }
+      });
+      loadContacts();
+    }
+
+    function logout() {
+      window.location.href = "login.html";
+    }
+
+    loadProfile();
+    loadContacts();
+  </script>
+</body>
+</html>
